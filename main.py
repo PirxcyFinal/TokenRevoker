@@ -1,32 +1,56 @@
-import keep_alive
-import discord
 import os
-import time
-import discord.ext
-from discord.utils import get
-from discord.ext import commands, tasks
-from discord.ext.commands import has_permissions,  CheckFailure, check
 import re
-import requests, random
+import random
+import time
+import string
+
+import aiohttp
+import keep_alive
+import aiohttp
+import discord
+import discord.ext
+
+from discord.utils import get
+from discord.ext import commands
+from discord.ext import tasks
+from discord.ext.commands import has_permissions
+from discord.ext.commands import CheckFailure
+from discord.ext.commands import check
 from IPy import IP
 from easypydb import DB
 from github import Github
-g = Github(os.environ['GITHUB_TOKEN'])
-repo = g.get_repo("CoolCoderSJ/TokenRevoker")
 
-db = DB("db", os.environ['DB_TOKEN'])
+repo = Github(os.environ['GITHUB_TOKEN']).get_repo("CoolCoderSJ/TokenRevoker")
+
+db = DB(
+	"db",
+	os.environ['DB_TOKEN']
+)
 db.autoload = True
 db.autosave = True
 
 def Service(token):
-	if re.search(r"""[M-Z][A-Za-z\d]{23}\.[\w-]{6}.[\w-]{27}""", token):
+	if re.search(
+		r"""[M-Z][A-Za-z\d]{23}\.[\w-]{6}.[\w-]{27}""", 
+		token
+	):
 		return "Discord"
-	elif re.search(r"""xapp-[0-9a-zA-Z]-[0-9A-Z]{11}-[0-9]{13}-[0-9a-zA-Z]{24}""", token):
+	elif re.search(
+		r"""xapp-[0-9a-zA-Z]-[0-9A-Z]{11}-[0-9]{13}-[0-9a-zA-Z]{24}""", 
+		token
+	):
 		return "Slack API Key"
-	elif re.search(r"""https://hooks.slack.com/services/""", token):
+	elif re.search(
+		r"https://hooks.slack.com/services/", token):
 		return "Slack Webhook URL"
-	elif re.search(r"""(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)""", token):
-		result = re.search(r"""(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)""", token)
+	elif re.search(
+		r"""(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)""", 
+		token
+	):
+		result = re.search(
+			r"""(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)""", 
+			token
+		)
 		ip = result.group(0)
 		ip = IP(ip)
 		if ip.iptype() == 'PUBLIC':
@@ -37,19 +61,21 @@ def Service(token):
 	else:
 		return "Unknown"
 
-
-client = discord.Client()
-
 client = commands.Bot(command_prefix = '+')
 
 @client.event
 async def on_ready():
-    await client.change_presence(status=discord.Status.online, activity=discord.Game(name="+help  | SnowCoder ⠕#0600"))
-    print(f"Logged in")
+		await client.change_presence(
+			status=discord.Status.online, 
+			activity=discord.Game(name="+help  | SnowCoder ⠕#0600")
+		)
+		print(f"Logged in")
 
 @client.command()
 async def services(ctx):
-	embed = discord.Embed(title="Supported Services-", description="""
+	embed = discord.Embed(
+	title="Supported Services-", 
+	description="""
 **DISCORD**
 **Slack API Key**
 **Slack Webhook**
@@ -63,17 +89,16 @@ async def on_message(message):
 	await client.process_commands(message)
 	if str(message.author.id) in db.data.keys():
 		return
-	channel = await message.author.create_dm()
 	if message.content != "":
 		service = Service(message.content)
 		if service != "Unknown":
 			if service == "IPv4" or service == "IPv6":
 				
-				await channel.send(f"Uh oh! We detected an {service} in your message! Make sure you stay safe!\n\nMessage Link: {message.jump_url}")
+				await message.author.send(f"Uh oh! We detected an {service} in your message! Make sure you stay safe!\n\nMessage Link: {message.jump_url}")
 			else:
 				token = message.content.split()
 				tok = ""
-				letters = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z']
+				letters = list(string.ascii_lowercase)
 				for char in range(25):
 					tok += random.choice(letters)
 				text = ""
@@ -86,20 +111,29 @@ async def on_message(message):
 					repo.create_file(f"leakedtoken{tok}.txt", f"Hey there!\n\nWe've created this file because a token was found on Discord, and needs to be revoked for security reasons. \n\nGuild: {message.guild.name}\nReporter: {message.author.name}#{message.author.discriminator}\n\nGuessed Service: {service}\nTOKEN: {message}", f"Hey there!\n\nWe've created this file because a token was found on Discord, and needs to be revoked for security reasons. \n\nGuild: {message.guild.name}\nReporter: {message.author.name}#{message.author.discriminator}\n\nGuessed Service: {service}\nTOKEN: {message.content}", branch="leakedtokens")
 				except:
 					repo.update_file(f"leakedtoken{tok}.txt", f"Hey there!\n\nWe've created this file because a token was found on Discord, and needs to be revoked for security reasons. \n\nGuild: {message.guild.name}\nReporter: {message.author.name}#{message.author.discriminator}\n\nGuessed Service: {service}\nTOKEN: {message.content}", f"Hey there!\n\nWe've created this file because a token was found on Discord, and needs to be revoked for security reasons. \n\nGuild: {message.guild.name}\nReporter: {message.author.name}#{message.author.discriminator}\n\nGuessed Service: {service}\nTOKEN: {message}", branch="leakedtokens")
-				await channel.send(f"Hey there!\n\nYou've just leaked a token, but no worries, its been revoked! \n\nGuild: {message.guild.name}\nReporter: {message.author.name}#{message.author.discriminator}\n\nGuessed Service: {service}\n{text}\n\nMessage Link: {message.jump_url}")
+				await message.author.send(f"Hey there!\n\nYou've just leaked a token, but no worries, its been revoked! \n\nGuild: {message.guild.name}\nReporter: {message.author.name}#{message.author.discriminator}\n\nGuessed Service: {service}\n{text}\n\nMessage Link: {message.jump_url}")
 	if message.attachments != []:
 		ocr = os.environ['OCR_KEY']
 		for attachment in message.attachments:
-			r = requests.get(f"http://api.qrserver.com/v1/read-qr-code/?fileurl={attachment.url}")
-			if "discord.com\\/ra\\/" in r.text:
+			async with aiohttp.ClientSession() as session:
+				async with session.request(
+					method='GET', 
+					url=f'http://api.qrserver.com/v1/read-qr-code/?fileurl={attachment.url}'
+      ) as r:
+					data = await r.text()
+			if "discord.com\\/ra\\/" in data:
 				await message.delete()
-			response = requests.get(f"https://api.ocr.space/parse/imageUrl?apikey={ocr}&url={attachment.url}")
-			txt = response.text
+			async with aiohttp.ClientSession() as session:
+				async with session.request(
+					method='GET', 
+					url=f'https://api.ocr.space/parse/imageUrl?apikey={ocr}&url={attachment.url}'
+      ) as r:
+					txt = await r.text()
 			service = Service(txt)
 			if service != "Unknown":
 				if service == "IPv4" or service == "IPv6":
 					try:
-						await channel.send(f"Uh oh! We detected an {service} in your message! Stay safe!\n\nMessage URL: {message.jump_url}")
+						await message.author.send(f"Uh oh! We detected an {service} in your message! Stay safe!\n\nMessage URL: {message.jump_url}")
 					except:
 						pass
 				else:
@@ -111,7 +145,7 @@ async def on_message(message):
 						repo.create_file(f"leakedtoken{tok}.txt", f"Hey there!\n\nWe've created this file because a token was found on Discord, and needs to be revoked for security reasons. \n\nGuild: {message.guild.name}\nReporter: {message.author.name}#{message.author.discriminator}\n\nGuessed Service: {service}\nTOKEN: {message}", f"Hey there!\n\nWe've created this file because a token was found on Discord, and needs to be revoked for security reasons. \n\nGuild: {message.guild.name}\nReporter: {message.author.name}#{message.author.discriminator}\n\nGuessed Service: {service}\nTOKEN: {txt}", branch="leakedtokens")
 					except:
 						repo.update_file(f"leakedtoken{tok}.txt", f"Hey there!\n\nWe've created this file because a token was found on Discord, and needs to be revoked for security reasons. \n\nGuild: {message.guild.name}\nReporter: {message.author.name}#{message.author.discriminator}\n\nGuessed Service: {service}\nTOKEN: {txt}", f"Hey there!\n\nWe've created this file because a token was found on Discord, and needs to be revoked for security reasons. \n\nGuild: {message.guild.name}\nReporter: {message.author.name}#{message.author.discriminator}\n\nGuessed Service: {service}\nTOKEN: {message}", branch="leakedtokens")
-					await channel.send(f"Hey there!\n\nYou've just leaked a token, but no worries, its been revoked! \n\nGuild: {message.guild.name}\nReporter: {message.author.name}#{message.author.discriminator}\n\nGuessed Service: {service}\n\nMessage Link: {message.jump_url}")
+					await message.author.send(f"Hey there!\n\nYou've just leaked a token, but no worries, its been revoked! \n\nGuild: {message.guild.name}\nReporter: {message.author.name}#{message.author.discriminator}\n\nGuessed Service: {service}\n\nMessage Link: {message.jump_url}")
 	
 
 @client.command()
@@ -125,7 +159,7 @@ async def revoke(ctx, token):
 			else:
 				token = ctx.message.content.split()
 				tok = ""
-				letters = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z']
+				letters = list(string.ascii_lowercase)
 				for char in range(25):
 					tok += random.choice(letters)
 				text = ""
@@ -162,7 +196,7 @@ async def rmwhitelist(ctx):
 
 @client.command()
 async def ping(ctx):
-	await ctx.send('Pong! {0}'.format(round(client.latency, 1)))
+	await ctx.send(f'Pong! {round(client.latency, 1)}ms')
 
 
 keep_alive.keep_alive()
